@@ -7,10 +7,8 @@ RUN_SPEED_PPS = RUN_SPEED_MPS * PIXEL_PER_METER
 
 TIME_PER_ACTION = 0.5
 ACTION_PER_TIME = 1.0 / TIME_PER_ACTION
-FRAMES_PER_ACTION = 8
+FRAMES_PER_ACTION = 5
 FRAMES_PER_TIME = ACTION_PER_TIME * FRAMES_PER_ACTION
-
-
 
 from pico2d import get_time, load_image, load_font, clamp,  SDL_KEYDOWN, SDL_KEYUP, SDLK_SPACE, SDLK_LEFT, SDLK_RIGHT
 from ball import Ball, BigBall
@@ -82,13 +80,16 @@ class Idle:
 
     @staticmethod
     def do(boy):
-        boy.frame = (boy.frame + FRAMES_PER_TIME * game_framework.frame_time) % 8
+        boy.frame = (boy.frame + FRAMES_PER_TIME * game_framework.frame_time) % 4
         if get_time() - boy.wait_time > 2:
             boy.state_machine.handle_event(('TIME_OUT', 0))
 
     @staticmethod
     def draw(boy):
-        boy.image.clip_draw(int(boy.frame) * 100, boy.action * 100, 100, 100, boy.x, boy.y)
+        if boy.face_dir > 0:  # 오른쪽으로
+            boy.image.clip_draw(int(boy.frame) * int(918/5), boy.frame_row * int(506/3), 184, 127, boy.x, boy.y, 183, 127)
+        elif boy.face_dir < 0:    # 왼쪽으로
+            boy.image.clip_composite_draw(int(boy.frame) * int(918/5), boy.frame_row * int(506/3), 184, 127, 0, 'h', boy.x, boy.y, 183, 127)
 
 
 
@@ -97,9 +98,11 @@ class Run:
     @staticmethod
     def enter(boy, e):
         if right_down(e) or left_up(e): # 오른쪽으로 RUN
-            boy.dir, boy.action, boy.face_dir = 1, 1, 1
+            boy.dir, boy.face_dir = 1, 1
+
         elif left_down(e) or right_up(e): # 왼쪽으로 RUN
-            boy.dir, boy.action, boy.face_dir = -1, 0, -1
+            boy.dir, boy.face_dir = -1, -1
+
 
     @staticmethod
     def exit(boy, e):
@@ -110,7 +113,7 @@ class Run:
 
     @staticmethod
     def do(boy):
-        boy.frame = (boy.frame + FRAMES_PER_TIME * game_framework.frame_time) % 8
+        boy.frame = (boy.frame + FRAMES_PER_TIME * game_framework.frame_time) % 4
         # boy.x += boy.dir * 5
         boy.x += boy.dir * RUN_SPEED_PPS * game_framework.frame_time
         boy.x = clamp(25, boy.x, 1600-25)
@@ -118,8 +121,10 @@ class Run:
 
     @staticmethod
     def draw(boy):
-        boy.image.clip_draw(int(boy.frame) * 100, boy.action * 100, 100, 100, boy.x, boy.y)
-
+        if boy.face_dir > 0:  # 오른쪽으로
+            boy.image.clip_draw(int(boy.frame) * int(918/5), boy.frame_row * int(506/3), 184, 127, boy.x, boy.y, 184, 127)
+        elif boy.face_dir < 0:    # 왼쪽으로
+            boy.image.clip_composite_draw(int(boy.frame) * int(918/5), boy.frame_row * int(506/3), 184, 127, 0, 'h', boy.x, boy.y, 184, 127)
 
 
 class Sleep:
@@ -154,7 +159,7 @@ class StateMachine:
         self.boy = boy
         self.cur_state = Idle
         self.transitions = {
-            Idle: {right_down: Run, left_down: Run, left_up: Run, right_up: Run, time_out: Sleep, space_down: Idle},
+            Idle: {right_down: Run, left_down: Run, left_up: Run, right_up: Run, time_out: Idle, space_down: Idle},
             Run: {right_down: Idle, left_down: Idle, right_up: Idle, left_up: Idle, space_down: Run},
             Sleep: {right_down: Run, left_down: Run, right_up: Run, left_up: Run}
         }
@@ -186,15 +191,15 @@ class Boy:
     def __init__(self):
         self.x, self.y = 400, 90
         self.frame = 0
-        self.action = 3
+        self.action = 1
         self.face_dir = 1
         self.dir = 0
-        self.image = load_image('animation_sheet.png')
+        self.image = load_image('bird_animation.png')
         self.font = load_font('ENCR10B.TTF', 16)
         self.state_machine = StateMachine(self)
         self.state_machine.start()
         self.item = 'Ball'
-
+        self.frame_row, self.frame_col = 0, 1
 
     def fire_ball(self):
 
